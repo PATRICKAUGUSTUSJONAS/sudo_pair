@@ -67,7 +67,7 @@ use template::Spec;
 use socket::Socket;
 
 use std::collections::HashSet;
-use std::fs::{File, OpenOptions};
+use std::fs::File;
 use std::io::{Read, Write};
 use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
@@ -203,11 +203,9 @@ impl SudoPair {
         // because we can't really do anything productive other than
         // die, and that could render `sudo` inoperable given an
         // unanticipated bug
-        let _ = self.plugin.user_info.tty
-            .as_ref()
-            .and_then(|tty| OpenOptions::new().write(true).open(tty).ok() )
-            .and_then(|mut file| file.write_all(&prompt).ok() )
-            .ok_or_else(|| {
+        let _ = self.plugin.tty().as_mut()
+            .and_then(|tty| tty.write_all(&prompt).ok() )
+            .ok_or_else(||
             // TODO: this is returning an error (EINVAL) even though it prints
             // successfully; I'm not entirely sure why. It started failing
             // when I added some new operators for the templating code, but
@@ -225,7 +223,7 @@ impl SudoPair {
             // there's enough information here for someone (probably me) to
             // pick up where I left off.
             self.plugin.stderr().write_all(&prompt)
-        });
+        );
     }
 
     fn remote_pair_connect(&mut self) -> Result<()> {
